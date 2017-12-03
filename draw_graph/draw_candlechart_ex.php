@@ -1,4 +1,6 @@
 <?PHP
+	$conn = mysqli_connect('localhost','root','password');
+	
 	$db_status = mysqli_select_db($conn, "coin_chart");
 	if(!$db_status)
 		die("DB_ERROR");
