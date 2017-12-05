@@ -19,4 +19,10 @@ public class Bitstamp extends Exchange {
 		
 	}
 
+	@Override
+	public void addMarket(String coin, String base) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

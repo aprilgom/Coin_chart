@@ -1,7 +1,5 @@
 package exchange;
 
-import java.util.Calendar;
-
 public class Market {
 	String coin, base, coinpair, jsonRecentTrades, oldJsonRecentTrades = "null", exchange;
 	String recentTradesSubUrl;
@@ -14,16 +12,5 @@ public class Market {
 		this.coinpair = coin.concat(base);
 		this.exchange = exchange;
 		this.recentTradesSubUrl = recentTradesSubUrl;
-	}
-	
-	class DataRow{
-		/*
-		 * date : 거래 체결 시간 GMT +9:00 기준으로 저장
-		 * price : 체결 가격
-		 * qty : 체결 수량
-		 */
-		Calendar date;
-		double price;
-		double qty;
-	}
+	}	
 }

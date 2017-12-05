@@ -1,18 +1,36 @@
 package exchange;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.google.gson.Gson;
 
 public class Bithumb extends Exchange{
 	
 	public Bithumb() throws MalformedURLException{
 		super("Bithumb", "https://api.bithumb.com/public/");
+	}
+	
+	public void addMarket(String coin, String base) {
+		if(base.equals("krw")) {
+			if(coin.equals("btc")) 
+				_addMarket(coin, base, "recent_transactions/btc");			
+			else if(coin.equals("eth"))
+				_addMarket(coin, base, "recent_transactions/eth");
+			else if(coin.equals("bch"))
+				_addMarket(coin, base, "recent_transactions/bch");
+			else 
+				System.err.println(this.name + "has no " + coin + "/" + base + " market!");
+		}
+		else 
+			System.err.println(this.name + "has no " + coin + "/" + base + " market!");		
 	}
 	
 	@Override
@@ -48,7 +66,11 @@ public class Bithumb extends Exchange{
 				
 				market.jsonRecentTrades = response.toString();
 			}
+			
+			makeDataRows(market);
 		}
+		
+		renewDB();
 		
 		//1초에 20회까지 API 호출 가능
 		//1회 호출 당 50ms 휴식
@@ -58,6 +80,101 @@ public class Bithumb extends Exchange{
 	
 	@Override
 	void makeDataRows(Market market) {
+		//최초로 데이터를 가져왔을때
+		if(market.oldJsonRecentTrades.equals("null")) {
+			String sec = "61";
+			Pattern p = Pattern.compile("^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}.[0-9]{1,2}:[0-9]{1,2}:([0-9]{1,2})$");
+			Matcher m;
+			
+			int ms = 100;
+			market.dataRows = this.json2DataRows(market.jsonRecentTrades);
+			for(int i = market.dataRows.length - 1; i >= 0; i--) {
+				m = p.matcher(market.dataRows[i].date);
+				m.find();
+				if(sec.equals(m.group(1)));
+				else {
+					ms = 100;
+					sec = m.group(1);
+				}
+				market.dataRows[i].date = market.dataRows[i].date.concat(":" + ms);
+				ms++;
+			}
+		}
+		//2번째 이후로 데이터 가져왔을 때
+		//중복되는 부분 빼고 새로운 부분만
+		//market.dataRows에 넣음
+		else {
+			Pattern p = Pattern.compile("^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}.[0-9]{1,2}:[0-9]{1,2}:([0-9]{1,2})$");
+			Matcher m;
+			
+			DataRow[] oldRows = json2DataRows(market.oldJsonRecentTrades);
+			DataRow[] newRows = json2DataRows(market.jsonRecentTrades);
+			
+			int i,j;
+			for(i = 0; i < newRows.length - 2; i++) {
+				if(newRows[i].equals(oldRows[0])) 
+					if(newRows[i + 1].equals(oldRows[1])) 
+						if(newRows[i + 2].equals(oldRows[2])) 
+							break;				
+			}
+			
+			//전 거래랑 달라지는 부분부터 과거 체결거래부터 초가 바뀌는 시점까지 500에서부터 초 이하 단위 붙이면서 올라감
+			int ms = 500;
+			String sec;
+			m = p.matcher(newRows[i-1].date);
+			m.find();
+			sec = m.group(1);
+			for(j = i - 1; j >= 0; j--) {
+				m = p.matcher(newRows[j].date);
+				m.find();
+				if(sec.equals(m.group(1))) {
+					newRows[j].date = newRows[j].date.concat(""+ms);
+					ms++;
+				}
+				else
+					break;
+			}
+			
+			//위에서 붙이지 못한 새로운 거래를 위에서부터 100부터 초 이하 단위를 붙이면서 내려감
+			ms = 100;
+			for(i = 0; i < j; i++) {
+				newRows[j].date = newRows[j].date.concat(""+ms);
+				ms++;
+			}
+			
+			market.dataRows = newRows;
+		}
+	}
+	
+	private DataRow[] json2DataRows(String json) {
+		Gson gson = new Gson();			
+		Response response = gson.fromJson(json, Response.class);
 		
+		Data[] datas = new Data[response.data.length];
+		datas = response.data;
+		
+		DataRow[] dataRows = new DataRow[response.data.length];		
+		
+		for(int i = 0; i < dataRows.length; i++) {
+			dataRows[i] = new DataRow();
+			dataRows[i].date = datas[i].transaction_date;
+			dataRows[i].price = datas[i].price;
+			dataRows[i].qty = datas[i].units_traded;
+		}
+		
+		return dataRows;
+	}
+	
+	private class Response{
+		@SuppressWarnings("unused")
+		String status;
+		Data[] data;
+	}
+	
+	private class Data{
+		@SuppressWarnings("unused")
+		String transaction_date, type;
+		@SuppressWarnings("unused")
+		double units_traded, price, total;
 	}
 }
