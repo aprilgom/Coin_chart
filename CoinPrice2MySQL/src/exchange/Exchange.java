@@ -51,7 +51,7 @@ public abstract class Exchange implements Runnable{
 	void renewDB() {
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql:localhost", "coin_chart_manager", "coin_chart");
+			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/coin_chart", "coin_chart_manager", "coin_chart");
 			st = connection.createStatement();
 		
 			StringBuffer values = new StringBuffer();

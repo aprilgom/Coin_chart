@@ -7,6 +7,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="D:/김세연/git_repos/Coin_chart/CoinPrice2MySQL/gson-2.8.2.jar"/>
-	<classpathentry kind="lib" path="D:/김세연/git_repos/Coin_chart/CoinPrice2MySQL/mysql-connector-java-5.1.45.tar.gz"/>
+	<classpathentry kind="lib" path="D:/Java_workspace/CoinPrice2MySQL/mysql-connector-java-5.1.45-bin.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

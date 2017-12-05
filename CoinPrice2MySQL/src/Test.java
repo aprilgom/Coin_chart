@@ -12,7 +12,7 @@ public class Test {
 		bithumb.addMarket("btc", "krw");
 		bithumb.addMarket("eth", "krw");
 		bithumb.addMarket("bch", "krw");
-		
+		(new Thread(bithumb)).start();
 	}
 
 }
