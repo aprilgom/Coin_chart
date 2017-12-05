@@ -42,6 +42,10 @@ public abstract class Exchange implements Runnable{
 	//abstract method로 선언
 	abstract void getRecentTrades() throws Exception;
 	
+	//convert market.jsonRecentTrades to market.dataRows
+	//getRecentTrades()와 동일한 이유로 abstract로 선언
+	abstract void makeDataRows(Market market);
+	
 	public void run() {
 		
 	}

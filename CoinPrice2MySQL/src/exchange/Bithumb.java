@@ -47,8 +47,6 @@ public class Bithumb extends Exchange{
 				in.close();
 				
 				market.jsonRecentTrades = response.toString();
-				
-				json2DataRows(market);
 			}
 		}
 		
@@ -56,10 +54,10 @@ public class Bithumb extends Exchange{
 		//1회 호출 당 50ms 휴식
 		Thread.sleep((long)(50*this.numOfMarket));
 		
+	}	
+	
+	@Override
+	void makeDataRows(Market market) {
+		
 	}
-
-	private void json2DataRows(Market market) {
-		//json->DataRows로 변환
-	}
-
 }

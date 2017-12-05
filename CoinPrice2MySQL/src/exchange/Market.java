@@ -3,7 +3,7 @@ package exchange;
 import java.util.Calendar;
 
 public class Market {
-	String coin, base, coinpair, jsonRecentTrades, exchange;
+	String coin, base, coinpair, jsonRecentTrades, oldJsonRecentTrades = "null", exchange;
 	String recentTradesSubUrl;
 	DataRow[] dataRows;
 	
