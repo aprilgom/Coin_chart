@@ -49,28 +49,39 @@ public abstract class Exchange implements Runnable{
 	
 	//거래소의 최근 거래들을 DB에 갱신함
 	void renewDB() {
+		StringBuffer values = new StringBuffer();
+		
+		Collection<Market> marketCollection = markets.values();
+		Iterator<Market> e = marketCollection.iterator();
+		Market market = new Market();
+		int i;
+		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/coin_chart", "coin_chart_manager", "coin_chart");
-			st = connection.createStatement();
-		
-			StringBuffer values = new StringBuffer();
+			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/bithumb?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
+			st = connection.createStatement();						
 			
-			Collection<Market> marketCollection = markets.values();
-			Iterator<Market> e = marketCollection.iterator();
-			Market market;
 			while(e.hasNext()) {
 				market = e.next();
-				for(int i = 0; i < market.dataRows.length; i++) {
-					values.append("('" + market.dataRows[i].date + "','" + market.dataRows[i].price +
-							"','" + market.dataRows[i].qty + "')");
+				if(market.dataRows[0].date.equals("-1")) {
+					continue;
 				}
-				st.executeUpdate("insert into " + this.name + " values " + values.toString());
-				values.delete(0, values.length() - 1);
+				for(i = 0; i < market.dataRows.length - 1; i++) {
+					values.append("('" + market.dataRows[i].date + "','" + market.dataRows[i].price +
+							"','" + market.dataRows[i].qty + "'),");
+				}
+				values.append("('" + market.dataRows[i].date + "','" + market.dataRows[i].price +
+						"','" + market.dataRows[i].qty + "');");
+				st.executeUpdate("insert into " + market.coinpair + " values " + values.toString());
+				System.out.println("mysql query success : insert into " + market.coinpair + " values " + values.toString());
+				values.delete(0, values.length());
 			}
 			st.close();
 			connection.close();
 		}catch(SQLException se1) {
+			System.err.println(this.name +" : mysql query failed : insert into " + market.coinpair + " values " + values.toString());
+			System.err.println("oldJson :" + market.oldJsonRecentTrades);
+			System.err.println("newJson :" + market.jsonRecentTrades);
 			se1.printStackTrace();
 		}catch(Exception ex) {
 			ex.printStackTrace();

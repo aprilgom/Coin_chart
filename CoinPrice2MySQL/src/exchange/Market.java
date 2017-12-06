@@ -13,4 +13,7 @@ public class Market {
 		this.exchange = exchange;
 		this.recentTradesSubUrl = recentTradesSubUrl;
 	}	
+	
+	public Market() {
+	}
 }

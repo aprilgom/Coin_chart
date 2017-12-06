@@ -119,6 +119,12 @@ public class Bithumb extends Exchange{
 							break;				
 			}
 			
+			if(i == 0) {
+				market.dataRows = new DataRow[1];
+				market.dataRows[0] = new DataRow("-1", -1, -1);
+				return;
+			}
+			
 			//전 거래랑 달라지는 부분부터 과거 체결거래부터 초가 바뀌는 시점까지 초 이하 단위를 500부터 붙이면서 올라감
 			//초가 바뀌는 시점 부터는 초 이하 단위를 100부터 붙이면서 올라감
 			int ms = 500;
@@ -130,17 +136,20 @@ public class Bithumb extends Exchange{
 				m = p.matcher(newRows[j].date);
 				m.find();
 				if(sec.equals(m.group(1))) {
-					newRows[j].date = newRows[j].date.concat(""+ms);
+					newRows[j].date = newRows[j].date.concat(":"+ms);
 					ms++;
 				}
 				else{
 					ms = 100;
-					newRows[j].date = newRows[j].date.concat(""+ms);
+					sec = m.group(1);
+					newRows[j].date = newRows[j].date.concat(":"+ms);
 					ms++;
 				}
 			}
-			
-			market.dataRows = newRows;
+			market.dataRows = new DataRow[i];
+			for(j = 0; j < i; j ++) {
+				market.dataRows[j] = newRows[j];
+			}
 		}
 	}
 	
@@ -154,10 +163,7 @@ public class Bithumb extends Exchange{
 		DataRow[] dataRows = new DataRow[response.data.length];		
 		
 		for(int i = 0; i < dataRows.length; i++) {
-			dataRows[i] = new DataRow();
-			dataRows[i].date = datas[i].transaction_date;
-			dataRows[i].price = datas[i].price;
-			dataRows[i].qty = datas[i].units_traded;
+			dataRows[i] = new DataRow(datas[i].transaction_date, datas[i].price, datas[i].units_traded);
 		}
 		
 		return dataRows;
