@@ -68,6 +68,7 @@ public class Bithumb extends Exchange{
 			}
 			
 			makeDataRows(market);
+			market.oldJsonRecentTrades = market.jsonRecentTrades;
 		}
 		
 		renewDB();
@@ -118,7 +119,8 @@ public class Bithumb extends Exchange{
 							break;				
 			}
 			
-			//전 거래랑 달라지는 부분부터 과거 체결거래부터 초가 바뀌는 시점까지 500에서부터 초 이하 단위 붙이면서 올라감
+			//전 거래랑 달라지는 부분부터 과거 체결거래부터 초가 바뀌는 시점까지 초 이하 단위를 500부터 붙이면서 올라감
+			//초가 바뀌는 시점 부터는 초 이하 단위를 100부터 붙이면서 올라감
 			int ms = 500;
 			String sec;
 			m = p.matcher(newRows[i-1].date);
@@ -131,15 +133,11 @@ public class Bithumb extends Exchange{
 					newRows[j].date = newRows[j].date.concat(""+ms);
 					ms++;
 				}
-				else
-					break;
-			}
-			
-			//위에서 붙이지 못한 새로운 거래를 위에서부터 100부터 초 이하 단위를 붙이면서 내려감
-			ms = 100;
-			for(i = 0; i < j; i++) {
-				newRows[j].date = newRows[j].date.concat(""+ms);
-				ms++;
+				else{
+					ms = 100;
+					newRows[j].date = newRows[j].date.concat(""+ms);
+					ms++;
+				}
 			}
 			
 			market.dataRows = newRows;
