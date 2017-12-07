@@ -1,6 +1,7 @@
 package exchange;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -40,6 +41,7 @@ public class Bithumb extends Exchange{
 		Market market;
 		int responseCode;
 		int num = 100;	//요쳥 거래수 100개
+		FileOutputStream out = null;
 		
 		while(e.hasNext()) {
 			market = e.next();
@@ -69,6 +71,12 @@ public class Bithumb extends Exchange{
 			
 			makeDataRows(market);
 			market.oldJsonRecentTrades = market.jsonRecentTrades;
+			out = new FileOutputStream(market.oldJson, false);
+			out.getChannel().truncate(0);
+			out.getChannel().force(true);
+			out.getChannel().lock();
+			out.write(market.jsonRecentTrades.getBytes(),0,market.jsonRecentTrades.length());
+			out.close();
 		}
 		
 		renewDB();
@@ -82,7 +90,7 @@ public class Bithumb extends Exchange{
 	@Override
 	void makeDataRows(Market market) {
 		//최초로 데이터를 가져왔을때
-		if(market.oldJsonRecentTrades.equals("null")) {
+		if(market.oldJsonRecentTrades.equals("")) {
 			String sec = "61";
 			Pattern p = Pattern.compile("^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}.[0-9]{1,2}:[0-9]{1,2}:([0-9]{1,2})$");
 			Matcher m;
@@ -120,8 +128,7 @@ public class Bithumb extends Exchange{
 			}
 			
 			if(i == 0) {
-				market.dataRows = new DataRow[1];
-				market.dataRows[0] = new DataRow("-1", -1, -1);
+				market.dataRows = null;
 				return;
 			}
 			

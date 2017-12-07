@@ -1,9 +1,12 @@
 package exchange;
 
+import java.io.File;
+
 public class Market {
-	String coin, base, coinpair, jsonRecentTrades, oldJsonRecentTrades = "null", exchange;
+	String coin, base, coinpair, jsonRecentTrades, oldJsonRecentTrades, exchange;
 	String recentTradesSubUrl;
 	DataRow[] dataRows;
+	File oldJson;
 	
 	//Constructor
 	public Market(String coin, String base, String exchange, String recentTradesSubUrl) {
