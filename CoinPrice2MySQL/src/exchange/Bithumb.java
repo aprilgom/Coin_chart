@@ -160,12 +160,12 @@ public class Bithumb extends Exchange{
 		}
 	}
 	
-	private DataRow[] json2DataRows(String json) {
+	@Override
+	DataRow[] json2DataRows(String json) {
 		Gson gson = new Gson();			
 		Response response = gson.fromJson(json, Response.class);
 		
-		Data[] datas = new Data[response.data.length];
-		datas = response.data;
+		Data[] datas = response.data;
 		
 		DataRow[] dataRows = new DataRow[response.data.length];		
 		

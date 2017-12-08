@@ -150,6 +150,8 @@ public abstract class Exchange implements Runnable{
 	//getRecentTrades()와 동일한 이유로 abstract로 선언
 	abstract void makeDataRows(Market market);
 	
+	abstract DataRow[] json2DataRows(String json);
+	
 	public abstract void addMarket(String coin, String base);
 	
 	//getRecentTrades 무한호출
