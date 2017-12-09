@@ -1,18 +1,23 @@
 package exchange;
 
 import java.io.BufferedReader;
-import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.gson.Gson;
 
 public class Bitstamp extends Exchange {
 	
+	//constructor
 	public Bitstamp() throws MalformedURLException {
 		super("Bitstamp", "https://www.bitstamp.net/api/");
 	}
@@ -24,7 +29,6 @@ public class Bitstamp extends Exchange {
 		Iterator<Market> e = marketCollection.iterator();
 		Market market;
 		int responseCode;
-		FileOutputStream out = null;
 		
 		while(e.hasNext()) {
 			market = e.next();
@@ -39,6 +43,7 @@ public class Bitstamp extends Exchange {
 			if(responseCode != 200) {
 				//error 처리할것
 				System.err.println("Http 응답 실패\n responseCode : " + responseCode);
+				System.err.println("url : " + url);
 				System.exit(-1);
 			}
 			else {
@@ -52,38 +57,80 @@ public class Bitstamp extends Exchange {
 				market.jsonRecentTrades = response.toString();
 			}
 			
-			makeDataRows(market);
-			market.oldJsonRecentTrades = market.jsonRecentTrades;
-			out = new FileOutputStream(market.oldJson, false);
-			out.getChannel().truncate(0);
-			out.getChannel().force(true);
-			out.getChannel().lock();
-			out.write(market.jsonRecentTrades.getBytes(),0,market.jsonRecentTrades.length());
-			out.close();
+			makeDataRows(market);			
 		}
 		
 		renewDB();
 		
-		//1초에 20회까지 API 호출 가능
-		//1회 호출 당 50ms 휴식
+		//1초에 1회까지 API 호출 가능
+		//1회 호출 당 1000ms 휴식
 		Thread.sleep((long)(1000*this.numOfMarket));
 	}
 	
 	@Override
 	void makeDataRows(Market market) {
-		
+		DataRow[] dataRows = json2DataRows(market.jsonRecentTrades);
+		List<DataRow> tmp = new ArrayList<DataRow>();
+		int maxTid;
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/"+ this.name +"?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
+			st = connection.createStatement();
+			ResultSet rs = st.executeQuery("select max(tid) from " + market.coinpair);
+			
+			if(!rs.next()) {
+				System.err.println("query max(tid) error!");
+				System.exit(-1);
+			}
+			
+			//현재 DB에 저장된 가장큰 tid 값을 읽어 새로운 거래만 리스트에 추가
+			maxTid = rs.getInt("max(tid)");
+			for(int i = 0; i < dataRows.length; i++) {
+				if(dataRows[i].tid > maxTid)
+					tmp.add(dataRows[i]);
+				else
+					break;
+			}
+			
+			if(tmp.isEmpty()) {
+				market.dataRows = null;
+				return;
+			}
+			else {
+				market.dataRows = tmp.toArray(new DataRow[0]);
+				return;
+			}			
+		}catch(SQLException se1) {
+			se1.printStackTrace();
+		}catch(Exception ex) {
+			ex.printStackTrace();
+		}finally {
+			try {
+				if(st!=null)
+					st.close();
+			}catch(SQLException se2) {
+				se2.printStackTrace();
+			}
+			try {
+				if(connection!=null)
+					connection.close();
+			}catch(SQLException se3) {
+				se3.printStackTrace();
+			}
+		}
 	}
 	
 	@Override
 	DataRow[] json2DataRows(String json) {
 		Gson gson = new Gson();
-		Response response = gson.fromJson(json, Response.class);
-		Data[] datas = response.datas;
+		Data[] datas = gson.fromJson(json, Data[].class);
 		
 		DataRow[] dataRows = new DataRow[datas.length];
-		for(in i = 0; i < datas.length; i++) {
-			dataRows[i] = new DataRow()
+		for(int i = 0; i < datas.length; i++) {
+			dataRows[i] = new DataRow(datas[i].tid,datas[i].date, datas[i].price, datas[i].amount);
 		}
+		
+		return dataRows;
 	}
 
 	@Override
@@ -91,23 +138,36 @@ public class Bitstamp extends Exchange {
 		// TODO Auto-generated method stub
 		if(base.equals("usd")) {
 			if(coin.equals("btc")) 
-				_addMarket(coin, base, "v2/trasactions/btcusd");			
+				_addMarket(coin, base, "v2/transactions/btcusd");			
 			else if(coin.equals("eth"))
-				_addMarket(coin, base, "v2/trasactions/ethusd");
+				_addMarket(coin, base, "v2/transactions/ethusd");
 			else if(coin.equals("bch"))
-				_addMarket(coin, base, "v2/trasactions/bchusd");
+				_addMarket(coin, base, "v2/transactions/bchusd");
 			else 
 				System.err.println(this.name + "has no " + coin + "/" + base + " market!");
 		}
 		else 
 			System.err.println(this.name + "has no " + coin + "/" + base + " market!");
-	}
-	private class Response{
-		Data[] datas;
+		/*try {
+			Class.forName("com.mysql.jdbc.Driver");
+			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/" + this.name + 
+						"?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
+			st = connection.createStatement();
+			
+			//작성중;
+			
+			ResultSet rs = st.executeQuery("select max(tid) from " + market.coinpair);
+			
+			if(!rs.next()) {
+				System.err.println("query max(tid) error!");
+				System.exit(-1);
+			}
+		}*/
 	}
 	private class Data{
 		long date, tid;
 		double price, amount;
+		@SuppressWarnings("unused")
 		int type;	// 0: buy, 1: sell
 		
 	}

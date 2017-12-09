@@ -32,9 +32,9 @@ public abstract class Exchange implements Runnable{
 	int numOfMarket = 0, IOExceptionCount = 0;
 	URL APIurl;
 	Map<String, Market> markets = new HashMap<String, Market>();
-	private Connection connection;
-	private Statement st;
-	private File log, errLog;
+	Connection connection;
+	Statement st;
+	File log, errLog;
 	
 	//Constructor
 	public Exchange(String name, String APIurl) throws MalformedURLException {
@@ -45,8 +45,6 @@ public abstract class Exchange implements Runnable{
 	}
 	
 	void _addMarket(String coin, String base, String recentTradesSubUrl) {
-		FileWriter fw = null;
-		
 		//이미 add 된 market인지 체크
 		if(markets.containsKey(coin + base)) {
 			System.err.println(coin + base + "market already exist in " + this.name);
@@ -56,63 +54,50 @@ public abstract class Exchange implements Runnable{
 		Market market = new Market(coin, base, this.name, recentTradesSubUrl);
 		market.oldJson = new File("./" +this.name + "/oldJson_" + market.coinpair);
 		
-		try {
-			fw = new FileWriter(market.oldJson);
-			fw.write("");
-		}catch(IOException e) {
-			e.printStackTrace();
-		}finally {
-			if(fw!=null)
-				try {
-					fw.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-		}
-		
 		markets.put(market.coinpair, market);			
 	}
 	
 	//거래소의 최근 거래들을 DB에 갱신함
 	void renewDB() throws IOException{
-		StringBuffer values = new StringBuffer();
-		
-		Collection<Market> marketCollection = markets.values();
-		Iterator<Market> e = marketCollection.iterator();
+		Collection<Market> marketCollec = markets.values();
+		Iterator<Market> iter = marketCollec.iterator();
 		Market market = new Market();
-		BufferedWriter logOut = new BufferedWriter(new FileWriter(log, true));
-		BufferedWriter errOut = new BufferedWriter(new FileWriter(errLog, true));
-		int i;
+		
+		StringBuffer strBuf = new StringBuffer();
+		
+		BufferedWriter logOut = new BufferedWriter(new FileWriter(this.log, true));
+		BufferedWriter errOut = new BufferedWriter(new FileWriter(this.errLog, true));
 		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/bithumb?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
-			st = connection.createStatement();						
+			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/" + this.name + 
+					"?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
+			st = connection.createStatement();
 			
-			while(e.hasNext()) {
-				market = e.next();
-				if(market.dataRows == null) {
+			while(iter.hasNext()) {
+				market = iter.next();
+				
+				if(market.dataRows == null)
 					continue;
+				
+				for(int i = 0; i < market.dataRows.length - 1; i++) {
+					strBuf.append("('" + market.dataRows[i].tid + "','" + market.dataRows[i].timestamp + "','"
+							+ market.dataRows[i].price + "','" + market.dataRows[i].qty + "'),");
 				}
-				for(i = 0; i < market.dataRows.length - 1; i++) {
-					values.append("('" + market.dataRows[i].date + "','" + market.dataRows[i].price +
-							"','" + market.dataRows[i].qty + "'),");
-				}
-				values.append("('" + market.dataRows[i].date + "','" + market.dataRows[i].price +
-						"','" + market.dataRows[i].qty + "');");
-				st.executeUpdate("insert into " + market.coinpair + " values " + values.toString());
-				System.out.println("mysql query success : insert into " + market.coinpair + " values " + values.toString());
-				logOut.append("mysql query success : insert into " + market.coinpair + " values " + values.toString() + "\n");
-				values.delete(0, values.length());
-			}
-			st.close();
-			connection.close();
-		}catch(SQLException se1) {
-			System.err.println(this.name +" : mysql query failed : insert into " + market.coinpair + " values " + values.toString());
+				strBuf.append("('" + market.dataRows[market.dataRows.length - 1].tid + "','" + market.dataRows[market.dataRows.length - 1].timestamp + "','"
+						+ market.dataRows[market.dataRows.length - 1].price + "','" + market.dataRows[market.dataRows.length -1 ].qty + "');");
+				
+				st.executeUpdate("insert into " + market.coinpair + " values " + strBuf.toString());
+				System.out.println(this.name + " mysql query success : " + "insert into " + market.coinpair + " values " + strBuf.toString());
+				
+				logOut.append("mysql query success : " + "insert into " + market.coinpair + " values " + strBuf.toString() + "\n");
+				strBuf.delete(0, strBuf.length());
+			}			
+		} catch(SQLException se1) {
+			System.err.println(this.name +" : mysql query failed : insert into " + market.coinpair + " values " + strBuf.toString());
 			System.err.println("oldJson :" + market.oldJsonRecentTrades);
 			System.err.println("newJson :" + market.jsonRecentTrades);
-			errOut.append("mysql query failed : insert into " + market.coinpair + " values " + values.toString() +
+			errOut.append("mysql query failed : insert into " + market.coinpair + " values " + strBuf.toString() +
 					"\noldJson :" + market.oldJsonRecentTrades + "\nnewJson :" + market.jsonRecentTrades + "\n");
 			se1.printStackTrace();
 		}catch(Exception ex) {
@@ -136,8 +121,12 @@ public abstract class Exchange implements Runnable{
 			if(errOut != null) {
 				errOut.close();
 			}
+
+			strBuf.delete(0, strBuf.length());
 		}
 	}
+	
+	public void saveOldJson(){}
 	
 	//거래소마다 API의 return value의 값이 상이하므로
 	//데이터를 읽어들이는 방법이 거래소마다 다르게 구현되므로
@@ -172,6 +161,7 @@ public abstract class Exchange implements Runnable{
 					strBuffer.append(line);
 				}
 				market.oldJsonRecentTrades = strBuffer.toString();	
+				strBuffer.delete(0, strBuffer.length());
 			}
 			catch(IOException e) {
 				e.printStackTrace();
@@ -190,11 +180,9 @@ public abstract class Exchange implements Runnable{
 			try {
 				getRecentTrades();
 			} catch(MalformedURLException e) {
-				System.err.println(e.getMessage());
 				e.printStackTrace();
 				System.exit(-1);
-			} catch(IOException e) {					
-				System.err.println(e.getMessage());
+			} catch(IOException e) {
 				e.printStackTrace();
 			}
 			catch (Exception e) {

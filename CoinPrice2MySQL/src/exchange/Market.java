@@ -7,6 +7,8 @@ public class Market {
 	String recentTradesSubUrl;
 	DataRow[] dataRows;
 	File oldJson;
+	int lastMs = 100;
+	long lastTid;
 	
 	//Constructor
 	public Market(String coin, String base, String exchange, String recentTradesSubUrl) {
