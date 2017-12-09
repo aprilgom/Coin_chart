@@ -12,6 +12,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,7 +36,9 @@ public abstract class Exchange implements Runnable{
 	Map<String, Market> markets = new HashMap<String, Market>();
 	Connection connection;
 	Statement st;
-	File log, errLog;
+	File log, errLog;	
+
+	boolean shutdown = false;
 	
 	//Constructor
 	public Exchange(String name, String APIurl) throws MalformedURLException {
@@ -67,6 +71,8 @@ public abstract class Exchange implements Runnable{
 		
 		BufferedWriter logOut = new BufferedWriter(new FileWriter(this.log, true));
 		BufferedWriter errOut = new BufferedWriter(new FileWriter(this.errLog, true));
+		Calendar cal;
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
@@ -90,14 +96,17 @@ public abstract class Exchange implements Runnable{
 				st.executeUpdate("insert into " + market.coinpair + " values " + strBuf.toString());
 				System.out.println(this.name + " mysql query success : " + "insert into " + market.coinpair + " values " + strBuf.toString());
 				
-				logOut.append("mysql query success : " + "insert into " + market.coinpair + " values " + strBuf.toString() + "\n");
+				cal = Calendar.getInstance();				
+				logOut.append(sdf.format(cal.getTime()) + " mysql query success : " + "insert into " + market.coinpair + " values " + strBuf.toString() + "\n");
 				strBuf.delete(0, strBuf.length());
 			}			
 		} catch(SQLException se1) {
 			System.err.println(this.name +" : mysql query failed : insert into " + market.coinpair + " values " + strBuf.toString());
 			System.err.println("oldJson :" + market.oldJsonRecentTrades);
 			System.err.println("newJson :" + market.jsonRecentTrades);
-			errOut.append("mysql query failed : insert into " + market.coinpair + " values " + strBuf.toString() +
+			
+			cal = Calendar.getInstance();
+			errOut.append(sdf.format(cal.getTime()) + " mysql query failed : insert into " + market.coinpair + " values " + strBuf.toString() +
 					"\noldJson :" + market.oldJsonRecentTrades + "\nnewJson :" + market.jsonRecentTrades + "\n");
 			se1.printStackTrace();
 		}catch(Exception ex) {
@@ -190,6 +199,8 @@ public abstract class Exchange implements Runnable{
 				e.printStackTrace();
 				System.exit(-1);
 			}
+			if(shutdown)
+				break;
 		}
 	}
 	

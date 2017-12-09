@@ -71,52 +71,29 @@ public class Bitstamp extends Exchange {
 	void makeDataRows(Market market) {
 		DataRow[] dataRows = json2DataRows(market.jsonRecentTrades);
 		List<DataRow> tmp = new ArrayList<DataRow>();
-		int maxTid;
-		try {
-			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/"+ this.name +"?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
-			st = connection.createStatement();
-			ResultSet rs = st.executeQuery("select max(tid) from " + market.coinpair);
+		long maxTid;
 			
-			if(!rs.next()) {
-				System.err.println("query max(tid) error!");
-				System.exit(-1);
+		//현재 DB에 저장된 가장큰 tid 값을 읽어 새로운 거래만 리스트에 추가
+		maxTid = market.lastTid;
+		for(int i = 0; i < dataRows.length; i++) {
+			if(dataRows[i].tid > maxTid) {
+				tmp.add(dataRows[i]);
+				
+				//market 객체의 lastTid 갱신
+				if(i == 0)
+					market.lastTid = dataRows[i].tid;
 			}
-			
-			//현재 DB에 저장된 가장큰 tid 값을 읽어 새로운 거래만 리스트에 추가
-			maxTid = rs.getInt("max(tid)");
-			for(int i = 0; i < dataRows.length; i++) {
-				if(dataRows[i].tid > maxTid)
-					tmp.add(dataRows[i]);
-				else
-					break;
-			}
-			
-			if(tmp.isEmpty()) {
-				market.dataRows = null;
-				return;
-			}
-			else {
-				market.dataRows = tmp.toArray(new DataRow[0]);
-				return;
-			}			
-		}catch(SQLException se1) {
-			se1.printStackTrace();
-		}catch(Exception ex) {
-			ex.printStackTrace();
-		}finally {
-			try {
-				if(st!=null)
-					st.close();
-			}catch(SQLException se2) {
-				se2.printStackTrace();
-			}
-			try {
-				if(connection!=null)
-					connection.close();
-			}catch(SQLException se3) {
-				se3.printStackTrace();
-			}
+			else
+				break;
+		}
+		
+		if(tmp.isEmpty()) {
+			market.dataRows = null;
+			return;
+		}
+		else {
+			market.dataRows = tmp.toArray(new DataRow[0]);
+			return;
 		}
 	}
 	
@@ -148,13 +125,15 @@ public class Bitstamp extends Exchange {
 		}
 		else 
 			System.err.println(this.name + "has no " + coin + "/" + base + " market!");
-		/*try {
+		
+		//현재 추가하는 market 객체에 DB상에 가장 큰 tid를 저장
+		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/" + this.name + 
 						"?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
 			st = connection.createStatement();
 			
-			//작성중;
+			Market market = markets.get(coin + base);
 			
 			ResultSet rs = st.executeQuery("select max(tid) from " + market.coinpair);
 			
@@ -162,7 +141,26 @@ public class Bitstamp extends Exchange {
 				System.err.println("query max(tid) error!");
 				System.exit(-1);
 			}
-		}*/
+			
+			market.lastTid = rs.getInt("max(tid)");
+		} catch(SQLException se1) {
+			se1.printStackTrace();
+		}catch(Exception ex) {
+			ex.printStackTrace();
+		}finally {
+			try {
+				if(st!=null)
+					st.close();
+			}catch(SQLException se2) {
+				se2.printStackTrace();
+			}
+			try {
+				if(connection!=null)
+					connection.close();
+			}catch(SQLException se3) {
+				se3.printStackTrace();
+			}
+		}
 	}
 	private class Data{
 		long date, tid;

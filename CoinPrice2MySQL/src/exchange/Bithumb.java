@@ -11,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
@@ -104,6 +105,9 @@ public class Bithumb extends Exchange{
 		BufferedWriter errOut = new BufferedWriter(new FileWriter(errLog, true));
 		int i;
 		
+		Calendar cal;
+		SimpleDateFormat sdt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/bithumb?autoReconnect=true&useSSL=false", "coin_chart_manager", "coin_chart");
@@ -122,7 +126,9 @@ public class Bithumb extends Exchange{
 						"','" + market.dataRows[i].qty + "');");
 				st.executeUpdate("insert into " + market.coinpair + " values " + values.toString());
 				System.out.println("Bithumb mysql query success : insert into " + market.coinpair + " values " + values.toString());
-				logOut.append("mysql query success : insert into " + market.coinpair + " values " + values.toString() + "\n");
+				
+				cal = Calendar.getInstance();
+				logOut.append(sdt.format(cal.getTime()) +" mysql query success : insert into " + market.coinpair + " values " + values.toString() + "\n");
 				values.delete(0, values.length());
 			}
 			st.close();
@@ -131,7 +137,9 @@ public class Bithumb extends Exchange{
 			System.err.println(this.name +" : mysql query failed : insert into " + market.coinpair + " values " + values.toString());
 			System.err.println("oldJson :" + market.oldJsonRecentTrades);
 			System.err.println("newJson :" + market.jsonRecentTrades);
-			errOut.append("mysql query failed : insert into " + market.coinpair + " values " + values.toString() +
+			
+			cal = Calendar.getInstance();
+			errOut.append(sdt.format(cal.getTime()) + " mysql query failed : insert into " + market.coinpair + " values " + values.toString() +
 					"\noldJson :" + market.oldJsonRecentTrades + "\nnewJson :" + market.jsonRecentTrades + "\n");
 			se1.printStackTrace();
 		}catch(Exception ex) {

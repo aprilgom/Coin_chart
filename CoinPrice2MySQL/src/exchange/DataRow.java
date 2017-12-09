@@ -28,6 +28,12 @@ public class DataRow{
 		this.qty = qty;
 	}
 	
+	public DataRow(long timestamp, double price, double qty) {
+		this.timestamp = timestamp;
+		this.price = price;
+		this.qty = qty;
+	}
+	
 	void parseDate() {
 		Pattern p = Pattern.compile("^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2}).([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})$");
 		Matcher m = p.matcher(this.date);
@@ -46,5 +52,9 @@ public class DataRow{
 		
 		return this.year == dataRow.year && this.month == dataRow.month && this.day == dataRow.day && this.hour == dataRow.hour && this.min == dataRow.min
 				&& this.sec == dataRow.sec && Double.compare(this.price, dataRow.price) == 0 && Double.compare(this.price, dataRow.price) == 0;
+	}
+	
+	boolean equalsWTid(DataRow dataRow) {
+		return this.timestamp == dataRow.timestamp && Double.compare(this.price, dataRow.price) == 0 && Double.compare(this.qty, dataRow.qty) == 0;
 	}
 }
