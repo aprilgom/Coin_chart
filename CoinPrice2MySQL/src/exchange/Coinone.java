@@ -138,17 +138,17 @@ public class Coinone extends Exchange {
 				return;
 			}
 			
-			for(oldCount = oldRows.length - 1, newCount = newRows.length - 1; oldCount >= 0 && newCount >= 0; oldCount--, newCount--) {
-				if(oldRows[oldCount].equalsWTid(newRows[newCount])) 
+			for(newCount = newRows.length - 1; newCount >= 0; newCount--) {
+				if(oldRows[oldRows.length - 1].equalsWTid(newRows[newCount])) 
 					break;				
 			}
-			
+						
 			//다시 같은 데이터 읽은 경우
 			if(newCount == newRows.length - 1) {
 				market.dataRows = null;
 				return;
 			}
-			
+						
 			tid = market.lastTid + 1;
 			market.dataRows = new DataRow[newRows.length - newCount - 1];
 			int i;
