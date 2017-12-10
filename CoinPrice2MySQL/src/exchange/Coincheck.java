@@ -1,27 +1,33 @@
 package exchange;
 
 import java.io.BufferedReader;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 
-public class Bitstamp extends Exchange {
-	
-	//constructor
-	public Bitstamp() throws MalformedURLException {
-		super("Bitstamp", "https://www.bitstamp.net/api/");
+public class Coincheck extends Exchange {
+
+	public Coincheck() throws MalformedURLException {
+		super("Coincheck", "https://coincheck.com/api/");
 	}
-	
+
 	@Override
-	void getRecentTrades() throws Exception{
+	void getRecentTrades() throws Exception {
 		Collection<Market> marketCollection = markets.values();
 		Iterator<Market> e = marketCollection.iterator();
 		Market market;
@@ -59,19 +65,44 @@ public class Bitstamp extends Exchange {
 		
 		renewDB();
 		
-		//1초에 1회까지 API 호출 가능
-		//1회 호출 당 1000ms 휴식
-		Thread.sleep((long)(1000*this.numOfMarket));
+		//1회 호출 당 500ms 휴식
+		Thread.sleep((long)(500*this.numOfMarket));
+
 	}
-	
+
 	@Override
 	DataRow[] json2DataRows(String json) {
 		Gson gson = new Gson();
 		Data[] datas = gson.fromJson(json, Data[].class);
 		
+		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-0"));
+		
+		Pattern p = Pattern.compile("^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})T([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})\\.000Z$");
+		Matcher m;
+		
 		DataRow[] dataRows = new DataRow[datas.length];
 		for(int i = 0; i < datas.length; i++) {
-			dataRows[i] = new DataRow(datas[i].tid,datas[i].date, datas[i].price, datas[i].amount);
+			m = p.matcher(datas[i].created_at);
+			if(!m.find()) {
+				try {
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					PrintWriter out = new PrintWriter(new FileWriter(errLog));
+					
+					System.err.println("Coincheck date doesn't match with pattern(yyyy-MM-ddTHH:mm:ss.000Z)");
+					System.err.println("see the json2DataRows in Coincheck Class");
+					out.println(sdf.format(Calendar.getInstance().getTime()) + "Coincheck date doesn't match with pattern(yyyy-MM-ddTHH:mm:ss.000Z)");
+					out.println("\tsee the json2DataRows in Coincheck Class");
+					out.close();
+					shutdown = true;
+					return null;
+				}
+				catch(Exception e) {
+					e.printStackTrace();
+				}
+			}
+			cal.set(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)),
+					Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)), Integer.parseInt(m.group(6)));
+			dataRows[i] = new DataRow(datas[i].id, (long)cal.getTimeInMillis()/1000, datas[i].rate, datas[i].amount);
 		}
 		
 		return dataRows;
@@ -79,13 +110,10 @@ public class Bitstamp extends Exchange {
 
 	@Override
 	public void addMarket(String coin, String base) {
-		if(base.equals("usd")) {
+		// TODO Auto-generated method stub
+		if(base.equals("jpy")) {
 			if(coin.equals("btc")) 
-				_addMarket(coin, base, "v2/transactions/btcusd");			
-			else if(coin.equals("eth"))
-				_addMarket(coin, base, "v2/transactions/ethusd");
-			else if(coin.equals("bch"))
-				_addMarket(coin, base, "v2/transactions/bchusd");
+				_addMarket(coin, base, "trades");			
 			else 
 				System.err.println(this.name + "has no " + coin + "/" + base + " market!");
 		}
@@ -128,12 +156,12 @@ public class Bitstamp extends Exchange {
 			}
 		}
 	}
+	
 	private class Data{
-		long date, tid;
-		double price, amount;
+		long id, rate;
+		double amount;
 		@SuppressWarnings("unused")
-		int type;	// 0: buy, 1: sell
-		
+		String order_type, created_at;
 	}
 
 }

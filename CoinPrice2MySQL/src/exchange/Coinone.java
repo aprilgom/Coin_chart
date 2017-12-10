@@ -25,6 +25,7 @@ public class Coinone extends Exchange {
 
 	public Coinone() throws MalformedURLException {
 		super("Coinone", "https://api.coinone.co.kr/");
+		this.usingTid = false;
 	}
 
 	@Override
@@ -69,7 +70,7 @@ public class Coinone extends Exchange {
 					PrintWriter out = new PrintWriter(new FileWriter(errLog));
 					out.println(sdt.format(Calendar.getInstance().getTime()) + " Coinone " + market.coinpair + " API call error!");
 					out.close();
-					this.shutdown = true;
+					shutdown = true;
 					return;
 				}
 				json = m.group(1);

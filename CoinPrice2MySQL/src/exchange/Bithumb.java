@@ -24,6 +24,7 @@ public class Bithumb extends Exchange{
 	
 	public Bithumb() throws MalformedURLException{
 		super("Bithumb", "https://api.bithumb.com/public/");
+		this.usingTid = false;
 	}
 	
 	public void addMarket(String coin, String base) {

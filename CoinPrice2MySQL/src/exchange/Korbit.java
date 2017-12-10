@@ -13,15 +13,14 @@ import java.util.Iterator;
 
 import com.google.gson.Gson;
 
-public class Bitstamp extends Exchange {
-	
-	//constructor
-	public Bitstamp() throws MalformedURLException {
-		super("Bitstamp", "https://www.bitstamp.net/api/");
+public class Korbit extends Exchange {
+
+	public Korbit() throws MalformedURLException {
+		super("Korbit", "https://api.korbit.co.kr/");
 	}
-	
+
 	@Override
-	void getRecentTrades() throws Exception{
+	void getRecentTrades() throws Exception {
 		Collection<Market> marketCollection = markets.values();
 		Iterator<Market> e = marketCollection.iterator();
 		Market market;
@@ -63,7 +62,7 @@ public class Bitstamp extends Exchange {
 		//1회 호출 당 1000ms 휴식
 		Thread.sleep((long)(1000*this.numOfMarket));
 	}
-	
+
 	@Override
 	DataRow[] json2DataRows(String json) {
 		Gson gson = new Gson();
@@ -71,7 +70,7 @@ public class Bitstamp extends Exchange {
 		
 		DataRow[] dataRows = new DataRow[datas.length];
 		for(int i = 0; i < datas.length; i++) {
-			dataRows[i] = new DataRow(datas[i].tid,datas[i].date, datas[i].price, datas[i].amount);
+			dataRows[i] = new DataRow(datas[i].tid, (long)datas[i].timestamp/1000, datas[i].price, datas[i].amount);
 		}
 		
 		return dataRows;
@@ -79,13 +78,13 @@ public class Bitstamp extends Exchange {
 
 	@Override
 	public void addMarket(String coin, String base) {
-		if(base.equals("usd")) {
+		if(base.equals("krw")) {
 			if(coin.equals("btc")) 
-				_addMarket(coin, base, "v2/transactions/btcusd");			
+				_addMarket(coin, base, "v1/transactions?currency_pair=btc_krw");			
 			else if(coin.equals("eth"))
-				_addMarket(coin, base, "v2/transactions/ethusd");
+				_addMarket(coin, base, "v1/transactions?currency_pair=eth_krw");
 			else if(coin.equals("bch"))
-				_addMarket(coin, base, "v2/transactions/bchusd");
+				_addMarket(coin, base, "v1/transactions?currency_pair=bch_krw");
 			else 
 				System.err.println(this.name + "has no " + coin + "/" + base + " market!");
 		}
@@ -128,12 +127,10 @@ public class Bitstamp extends Exchange {
 			}
 		}
 	}
+	
 	private class Data{
-		long date, tid;
-		double price, amount;
-		@SuppressWarnings("unused")
-		int type;	// 0: buy, 1: sell
-		
+		long timestamp, tid, price;
+		double amount;
 	}
 
 }

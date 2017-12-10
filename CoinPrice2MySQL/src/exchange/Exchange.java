@@ -13,10 +13,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public abstract class Exchange implements Runnable{
@@ -36,8 +38,8 @@ public abstract class Exchange implements Runnable{
 	Map<String, Market> markets = new HashMap<String, Market>();
 	Connection connection;
 	Statement st;
-	File log, errLog;	
-
+	File log, errLog;
+	boolean usingTid = true;
 	boolean shutdown = false;
 	
 	//Constructor
@@ -145,8 +147,37 @@ public abstract class Exchange implements Runnable{
 	abstract void getRecentTrades() throws Exception;
 	
 	//convert market.jsonRecentTrades to market.dataRows
-	//getRecentTrades()와 동일한 이유로 abstract로 선언
-	abstract void makeDataRows(Market market);
+	void makeDataRows(Market market) {
+		DataRow[] dataRows = json2DataRows(market.jsonRecentTrades);
+		if(dataRows == null) {
+			return;
+		}
+		List<DataRow> tmp = new ArrayList<DataRow>();
+		long maxTid;
+			
+		//현재 DB에 저장된 가장큰 tid 값을 읽어 새로운 거래만 리스트에 추가
+		maxTid = market.lastTid;
+		for(int i = 0; i < dataRows.length; i++) {
+			if(dataRows[i].tid > maxTid) {
+				tmp.add(dataRows[i]);
+				
+				//market 객체의 lastTid 갱신
+				if(i == 0)
+					market.lastTid = dataRows[i].tid;
+			}
+			else
+				break;
+		}
+		
+		if(tmp.isEmpty()) {
+			market.dataRows = null;
+			return;
+		}
+		else {
+			market.dataRows = tmp.toArray(new DataRow[0]);
+			return;
+		}
+	}
 	
 	abstract DataRow[] json2DataRows(String json);
 	
@@ -154,34 +185,35 @@ public abstract class Exchange implements Runnable{
 	
 	//getRecentTrades 무한호출
 	public void run(){
+		if(!usingTid) {
+			Collection<Market> marketCollection = markets.values();
+			Iterator<Market> iter = marketCollection.iterator();
+			Market market = new Market();
+			String line;
+			StringBuffer strBuffer = new StringBuffer();
+			BufferedReader in = null;		
 		
-		Collection<Market> marketCollection = markets.values();
-		Iterator<Market> iter = marketCollection.iterator();
-		Market market = new Market();
-		String line;
-		StringBuffer strBuffer = new StringBuffer();
-		BufferedReader in = null;
-		
-		while(iter.hasNext()) {
-			market = iter.next();
-			try {
-				in = new BufferedReader(new FileReader(market.oldJson));
-				while((line = in.readLine()) != null) {
-					strBuffer.append(line);
-				}
-				market.oldJsonRecentTrades = strBuffer.toString();	
-				strBuffer.delete(0, strBuffer.length());
-			}
-			catch(IOException e) {
-				e.printStackTrace();
-			}
-			finally {
-				if(in != null)
-					try {
-						in.close();
-					} catch (IOException e) {
-						e.printStackTrace();
+			while(iter.hasNext()) {
+				market = iter.next();
+				try {
+					in = new BufferedReader(new FileReader(market.oldJson));
+					while((line = in.readLine()) != null) {
+						strBuffer.append(line);
 					}
+					market.oldJsonRecentTrades = strBuffer.toString();	
+					strBuffer.delete(0, strBuffer.length());
+				}
+				catch(IOException e) {
+					e.printStackTrace();
+				}
+				finally {
+					if(in != null)
+						try {
+							in.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+				}
 			}
 		}
 		
